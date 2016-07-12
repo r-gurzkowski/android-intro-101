@@ -1,13 +1,15 @@
-package com.intro.android.injection;
+package com.intro.android.presentation.injection;
 
+import android.content.Context;
+
+import com.intro.android.repository.adapter.NasaRoverRestAdapter;
 import com.squareup.moshi.Moshi;
+import com.squareup.picasso.Picasso;
 
 import javax.inject.Singleton;
 
 import dagger.Module;
 import dagger.Provides;
-import okhttp3.ConnectionPool;
-import okhttp3.ConnectionSpec;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Retrofit;
@@ -15,18 +17,35 @@ import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;
 import timber.log.Timber;
 
-import static java.util.Collections.singletonList;
-
 @Module
+@Singleton
 public class MainModule {
+
+    private Context context;
+
+    public MainModule(Context context) {
+        this.context = context.getApplicationContext();
+    }
 
     @Provides
     @Singleton
-    static Retrofit provideRetrofit(MoshiConverterFactory moshiConverterFactory,
-                                    RxJavaCallAdapterFactory rxJavaCallAdapterFactory,
-                                    OkHttpClient client) {
+    NasaRoverRestAdapter nasaRoverRestAdapter(Retrofit retrofit) {
+        return retrofit.create(NasaRoverRestAdapter.class);
+    }
+
+    @Provides
+    @Singleton
+    Picasso providePicasso() {
+        return Picasso.with(context);
+    }
+
+    @Provides
+    @Singleton
+    Retrofit provideRetrofit(MoshiConverterFactory moshiConverterFactory,
+                             RxJavaCallAdapterFactory rxJavaCallAdapterFactory,
+                             OkHttpClient client) {
         return new Retrofit.Builder()
-                .baseUrl("http://whatever.com")
+                .baseUrl("https://api.nasa.gov/mars-photos/api/v1/")
                 .addConverterFactory(moshiConverterFactory)
                 .addCallAdapterFactory(rxJavaCallAdapterFactory)
                 .client(client)
@@ -35,29 +54,33 @@ public class MainModule {
 
     @Provides
     @Singleton
-    static MoshiConverterFactory provideMoshiConverterFactory(Moshi moshi) {
+    Moshi provideMoshi() {
+        return new Moshi.Builder().build();
+    }
+
+    @Provides
+    @Singleton
+    MoshiConverterFactory provideMoshiConverterFactory(Moshi moshi) {
         return MoshiConverterFactory.create(moshi);
     }
 
     @Provides
     @Singleton
-    static RxJavaCallAdapterFactory provideRxJavaCallAdapterFactory() {
+    RxJavaCallAdapterFactory provideRxJavaCallAdapterFactory() {
         return RxJavaCallAdapterFactory.create();
     }
 
     @Provides
     @Singleton
-    static OkHttpClient provideOkHttpClient(HttpLoggingInterceptor httpLoggingInterceptor, ConnectionPool connectionPool,
-                                            ConnectionSpec connectionSpec) {
+    OkHttpClient provideOkHttpClient(HttpLoggingInterceptor httpLoggingInterceptor) {
         return new OkHttpClient.Builder()
                 .addInterceptor(httpLoggingInterceptor)
-                .connectionSpecs(singletonList(connectionSpec))
                 .build();
     }
 
     @Provides
     @Singleton
-    static HttpLoggingInterceptor provideHttpLoggingInterceptor(HttpLoggingInterceptor.Logger logger) {
+    HttpLoggingInterceptor provideHttpLoggingInterceptor(HttpLoggingInterceptor.Logger logger) {
         HttpLoggingInterceptor httpLoggingInterceptor = new HttpLoggingInterceptor(logger);
         httpLoggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         return httpLoggingInterceptor;
@@ -65,7 +88,7 @@ public class MainModule {
 
     @Provides
     @Singleton
-    static HttpLoggingInterceptor.Logger provideHttpLogger() {
+    HttpLoggingInterceptor.Logger provideHttpLogger() {
         return new HttpLoggingInterceptor.Logger() {
             @Override
             public void log(String message) {
